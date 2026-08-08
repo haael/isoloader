@@ -28,24 +28,24 @@ BOOLEAN MatchesFilePattern(IN CHAR16 *FileName, IN CHAR16 *Pattern);
  * @brief Lists files in a directory.
  * @param[in]  PartitionRoot Root file handle of partition.
  * @param[in]  DirPath      Directory path.
- * @param[out] FileList     Pointer to receive array of file names.
- * @param[out] FileCount    Pointer to receive number of files.
+ * @param[out] FileList     Pointer to receive NULL-terminated array of file names.
+ * @param[out] FileCount    Pointer to receive number of files (does not include the final NULL item).
  * @return EFI_STATUS
  */
 EFI_STATUS ListFilesInDirectory(IN EFI_FILE_HANDLE PartitionRoot, IN CHAR16 *DirPath, OUT CHAR16 ***FileList, OUT UINTN *FileCount);
 
 /**
  * @brief Filters files based on partition spec, directory, and pattern criteria.
- * @param[in]  PartitionSpecs        Array of partition specs (device path, GUID, or label).
- * @param[in]  PartitionSpecCount    Number of partition specs.
+ * @param[in]  PartitionSpecs        NULL-terminated array of partition specs (device path, GUID, or label).
+ * @param[in]  PartitionSpecCount    Number of partition specs (does not include the final NULL item).
  * @param[in]  MatchParts            Array of partition filter specs.
  * @param[in]  MatchPartCount        Number of partition filter specs.
  * @param[in]  MatchDirs             Array of directory paths.
  * @param[in]  MatchDirCount         Number of directories.
  * @param[in]  MatchPatterns         Array of file patterns.
  * @param[in]  MatchPatternCount     Number of patterns.
- * @param[out] FilePaths             Pointer to receive array of file paths.
- * @param[out] FilePathCount         Pointer to receive number of file paths.
+ * @param[out] FilePaths             Pointer to receive NULL-terminated array of file paths.
+ * @param[out] FilePathCount         Pointer to receive number of file paths (does not include the final NULL item).
  * @return EFI_STATUS
  */
 EFI_STATUS FilterMatchFiles(
