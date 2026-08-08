@@ -4,8 +4,8 @@
  * @brief Parses a configuration file buffer for a given key.
  * @param[in]  Buffer  UTF-8 configuration text.
  * @param[in]  Key     Key to search for.
- * @param[out] Values  Pointer to receive array of value strings.
- * @param[out] Count   Pointer to receive number of values.
+ * @param[out] Values  Pointer to receive NULL-terminated array of value strings - NULL-terminated array of NULL-terminated (CHAR16*) UCS-2 strings.
+ * @param[out] Count   Pointer to receive number of values (does not include the final NULL item).
  * @return EFI_STATUS
  */
 EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, OUT UINTN *Count)
@@ -105,7 +105,7 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
                     Ptr++;
                 }
 
-                /* Allocate or resize the value array */
+                /* Allocate or resize the value array (extra slot for NULL terminator) */
                 if (*Count + 1 >= ValueArraySize) {
                     UINTN NewSize = ValueArraySize == 0 ? 4 : ValueArraySize * 2;
                     CHAR16 **NewArray = NULL;
@@ -150,6 +150,11 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
         if (*Ptr) {
             Ptr++;
         }
+    }
+
+    /* Null-terminate the array */
+    if (*Values && *Count > 0) {
+        (*Values)[*Count] = NULL;
     }
 
     Status = EFI_SUCCESS;
