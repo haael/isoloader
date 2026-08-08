@@ -2,7 +2,7 @@
 ARCH            = x86_64
 
 HEADERS         = common.h config.h files.h match.h partition.h
-SRCS            = common.c config.c files.c match.c main.c 
+SRCS            = common.c config.c files.c match.c partition.c main.c 
 OBJS            = $(SRCS:.c=.o)
 
 SHAREDOBJ       = isoloader.so
