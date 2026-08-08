@@ -4,16 +4,16 @@
 
 /**
  * @brief Filters files based on partition spec, directory, and pattern criteria.
- * @param[in]  PartitionSpecs        Array of partition specs (device path, GUID, or label).
- * @param[in]  PartitionSpecCount    Number of partition specs.
+ * @param[in]  PartitionSpecs        NULL-terminated array of partition specs (device path, GUID, or label).
+ * @param[in]  PartitionSpecCount    Number of partition specs (does not include the final NULL item).
  * @param[in]  MatchParts            Array of partition filter specs.
  * @param[in]  MatchPartCount        Number of partition filter specs.
  * @param[in]  MatchDirs             Array of directory paths.
  * @param[in]  MatchDirCount         Number of directories.
  * @param[in]  MatchPatterns         Array of file patterns.
  * @param[in]  MatchPatternCount     Number of patterns.
- * @param[out] FilePaths             Pointer to receive array of file paths.
- * @param[out] FilePathCount         Pointer to receive number of file paths.
+ * @param[out] FilePaths             Pointer to receive NULL-terminated array of file paths.
+ * @param[out] FilePathCount         Pointer to receive number of file paths (does not include the final NULL item).
  * @return EFI_STATUS
  */
 EFI_STATUS FilterMatchFiles(
@@ -95,7 +95,7 @@ EFI_STATUS FilterMatchFiles(
     }
 
     /* Iterate over all partition specs */
-    for (i = 0; i < PartitionSpecCount; i++) {
+    for (i = 0; PartitionSpecs[i] != NULL && i < PartitionSpecCount; i++) {
         MatchesPartition = FALSE;
 
         /* Check if the partition spec matches any filter in MatchParts */
@@ -163,7 +163,7 @@ EFI_STATUS FilterMatchFiles(
                         }
 
                         /* Add to the result list */
-                        if (TempFilePathCount >= TempFilePathCapacity) {
+                        if (TempFilePathCount + 1 >= TempFilePathCapacity) {
                             UINTN NewCapacity = TempFilePathCapacity == 0 ? 4 : TempFilePathCapacity * 2;
                             CHAR16 **NewFilePaths = ReallocatePool(
                                 TempFilePaths,
@@ -205,6 +205,26 @@ EFI_STATUS FilterMatchFiles(
             PartitionRoot = NULL;
         }
     }
+
+    /* Allocate extra slot for NULL terminator if needed */
+    if (TempFilePathCount + 1 > TempFilePathCapacity) {
+        UINTN NewCapacity = TempFilePathCapacity == 0 ? 4 : TempFilePathCapacity * 2;
+        CHAR16 **NewFilePaths = ReallocatePool(
+            TempFilePaths,
+            TempFilePathCapacity * sizeof(CHAR16 *),
+            NewCapacity * sizeof(CHAR16 *)
+        );
+        if (!NewFilePaths) {
+            LOG_ERROR(L"FilterMatchFiles: ReallocatePool for NULL terminator failed");
+            Status = EFI_OUT_OF_RESOURCES;
+            goto Error;
+        }
+        TempFilePaths = NewFilePaths;
+        TempFilePathCapacity = NewCapacity;
+    }
+
+    /* Null-terminate the array */
+    TempFilePaths[TempFilePathCount] = NULL;
 
     /* Set output */
     *FilePaths = TempFilePaths;

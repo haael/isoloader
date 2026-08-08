@@ -3,8 +3,8 @@
 
 /**
  * @brief Enumerates all available partitions.
- * @param[out] PartitionSpecs     Pointer to receive array of partition specs (device path, GUID, or label).
- * @param[out] PartitionSpecCount Pointer to receive number of partition specs.
+ * @param[out] PartitionSpecs     Pointer to receive NULL-terminated array of partition specs (device path, GUID, or label).
+ * @param[out] PartitionSpecCount Pointer to receive number of partition specs (does not include the final NULL item).
  * @return EFI_STATUS
  */
 EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *PartitionSpecCount)
@@ -48,13 +48,18 @@ EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *Partitio
         goto Error;
     }
 
-    /* Allocate initial array for partition specs */
-    PartitionSpecCapacity = HandleCount > 0 ? HandleCount : 4;
+    /* Allocate initial array for partition specs (extra slot for NULL terminator) */
+    PartitionSpecCapacity = HandleCount > 0 ? HandleCount + 1 : 4;
     TempPartitionSpecs = AllocatePool(PartitionSpecCapacity * sizeof(CHAR16 *));
     if (!TempPartitionSpecs) {
         LOG_ERROR(L"EnumeratePartitions: AllocatePool failed for TempPartitionSpecs");
         Status = EFI_OUT_OF_RESOURCES;
         goto Error;
+    }
+
+    /* Initialize all slots to NULL */
+    for (i = 0; i < PartitionSpecCapacity; i++) {
+        TempPartitionSpecs[i] = NULL;
     }
 
     /* Iterate through all block IO handles */
@@ -88,7 +93,7 @@ EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *Partitio
         }
 
         /* Check if we need to grow the array */
-        if (*PartitionSpecCount >= PartitionSpecCapacity) {
+        if (*PartitionSpecCount + 1 >= PartitionSpecCapacity) {
             UINTN NewCapacity = PartitionSpecCapacity * 2;
             CHAR16 **NewArray = ReallocatePool(TempPartitionSpecs,
                                                PartitionSpecCapacity * sizeof(CHAR16 *),
@@ -101,6 +106,10 @@ EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *Partitio
             }
             TempPartitionSpecs = NewArray;
             PartitionSpecCapacity = NewCapacity;
+            /* Initialize new slots to NULL */
+            for (i = *PartitionSpecCount + 1; i < PartitionSpecCapacity; i++) {
+                TempPartitionSpecs[i] = NULL;
+            }
         }
 
         /* Store the device path string */
@@ -113,6 +122,9 @@ EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *Partitio
         gBS->CloseProtocol(HandleBuffer[i], &gEfiBlockIoProtocolGuid, gAppImageHandle, NULL);
     }
 
+    /* Null-terminate the array */
+    TempPartitionSpecs[*PartitionSpecCount] = NULL;
+
     /* Set output */
     *PartitionSpecs = TempPartitionSpecs;
     TempPartitionSpecs = NULL; /* Prevent double-free */
@@ -124,7 +136,7 @@ Error:
     if (TempPartitionSpecs) {
         LOG_DEBUG(L"EnumeratePartitions: Error label freeing TempPartitionSpecs");
         UINTN j = 0;
-        for (j = 0; j < *PartitionSpecCount; j++) {
+        for (j = 0; j < PartitionSpecCapacity; j++) {
             if (TempPartitionSpecs[j]) {
                 FreePool(TempPartitionSpecs[j]);
             }
