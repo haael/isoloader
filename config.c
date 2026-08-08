@@ -162,7 +162,7 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
 
 Error:
     if (Values && *Values) {
-        LOG_DEBUG(L"ParseConfig: Error freeing output Values");
+        LOG_DEBUG(L"ParseConfig: freeing output Values");
         FreeCHAR16Array(Values, *Count);
     }
     if (Count) {
@@ -171,7 +171,7 @@ Error:
 
 Success:
     if (KeyUTF8) {
-        LOG_DEBUG(L"ParseConfig: Success freeing temporary KeyUTF8");
+        LOG_DEBUG(L"ParseConfig: freeing temporary KeyUTF8");
         FreePool(KeyUTF8);
     }
 

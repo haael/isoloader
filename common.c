@@ -99,7 +99,7 @@ EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst)
 
 Error:
     if (dst && *dst) {
-        LOG_DEBUG(L"CopyUCS2toUTF8: Error freeing output *dst");
+        LOG_DEBUG(L"CopyUCS2toUTF8: freeing output *dst");
         FreePool(*dst);
         *dst = NULL;
     }
@@ -161,7 +161,7 @@ EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst)
 
 Error:
     if (dst && *dst) {
-        LOG_DEBUG(L"CopyUTF8toUCS2: Error freeing output *dst");
+        LOG_DEBUG(L"CopyUTF8toUCS2: freeing output *dst");
         FreePool(*dst);
         *dst = NULL;
     }
