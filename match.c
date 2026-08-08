@@ -1,25 +1,24 @@
 #include "common.h"
 #include "match.h"
 #include "partition.h"
-#include "utils.h"
 
 /**
- * @brief Filters match files based on partition, directory, and pattern criteria.
- * @param[in]  Partitions        Array of partition infos.
- * @param[in]  PartitionCount    Number of partitions.
- * @param[in]  MatchParts        Array of partition filters.
- * @param[in]  MatchPartCount    Number of partition filters.
- * @param[in]  MatchDirs         Array of directory paths.
- * @param[in]  MatchDirCount     Number of directories.
- * @param[in]  MatchPatterns     Array of file patterns.
- * @param[in]  MatchPatternCount Number of patterns.
- * @param[out] FilePaths         Pointer to receive array of file paths.
- * @param[out] FilePathCount     Pointer to receive number of file paths.
+ * @brief Filters files based on partition spec, directory, and pattern criteria.
+ * @param[in]  PartitionSpecs        Array of partition specs (device path, GUID, or label).
+ * @param[in]  PartitionSpecCount    Number of partition specs.
+ * @param[in]  MatchParts            Array of partition filter specs.
+ * @param[in]  MatchPartCount        Number of partition filter specs.
+ * @param[in]  MatchDirs             Array of directory paths.
+ * @param[in]  MatchDirCount         Number of directories.
+ * @param[in]  MatchPatterns         Array of file patterns.
+ * @param[in]  MatchPatternCount     Number of patterns.
+ * @param[out] FilePaths             Pointer to receive array of file paths.
+ * @param[out] FilePathCount         Pointer to receive number of file paths.
  * @return EFI_STATUS
  */
 EFI_STATUS FilterMatchFiles(
-    IN PARTITION_INFO *Partitions,
-    IN UINTN PartitionCount,
+    IN CHAR16 **PartitionSpecs,
+    IN UINTN PartitionSpecCount,
     IN CHAR16 **MatchParts,
     IN UINTN MatchPartCount,
     IN CHAR16 **MatchDirs,
@@ -31,7 +30,7 @@ EFI_STATUS FilterMatchFiles(
 )
 {
     EFI_STATUS Status = EFI_SUCCESS;
-    PARTITION_INFO *DefaultPartition = NULL;
+    CHAR16 *DefaultPartitionSpec = NULL;
     CHAR16 **TempFilePaths = NULL;
     UINTN TempFilePathCount = 0;
     UINTN TempFilePathCapacity = 0;
@@ -47,61 +46,61 @@ EFI_STATUS FilterMatchFiles(
     BOOLEAN MatchesPartition = FALSE;
     BOOLEAN IsRelative = FALSE;
 
-    LOG_DEBUG(L"FilterMatchFiles: Partitions=%p, PartitionCount=%lu, MatchParts=%p, MatchPartCount=%lu, MatchDirs=%p, MatchDirCount=%lu, MatchPatterns=%p, MatchPatternCount=%lu, FilePaths=%p, FilePathCount=%p",
-              (VOID*)Partitions, (UINT64)PartitionCount, (VOID*)MatchParts, (UINT64)MatchPartCount,
+    LOG_DEBUG(L"FilterMatchFiles: PartitionSpecs=%p, PartitionSpecCount=%lu, MatchParts=%p, MatchPartCount=%lu, MatchDirs=%p, MatchDirCount=%lu, MatchPatterns=%p, MatchPatternCount=%lu, FilePaths=%p, FilePathCount=%p",
+              (VOID*)PartitionSpecs, (UINT64)PartitionSpecCount, (VOID*)MatchParts, (UINT64)MatchPartCount,
               (VOID*)MatchDirs, (UINT64)MatchDirCount, (VOID*)MatchPatterns, (UINT64)MatchPatternCount,
               (VOID*)FilePaths, (VOID*)FilePathCount);
 
     /* Validate input parameters */
-    if (!Partitions) {
-        LOG_ERROR(L"FilterMatchFiles: Partitions is NULL");
-        return INVALID_PARAMETER_ERROR;
+    if (!PartitionSpecs) {
+        LOG_ERROR(L"FilterMatchFiles: PartitionSpecs is NULL");
+        return EFI_INVALID_PARAMETER;
     }
     if (!MatchParts) {
         LOG_ERROR(L"FilterMatchFiles: MatchParts is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!MatchDirs) {
         LOG_ERROR(L"FilterMatchFiles: MatchDirs is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!MatchPatterns) {
         LOG_ERROR(L"FilterMatchFiles: MatchPatterns is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Validate output parameters */
     if (!FilePaths) {
         LOG_ERROR(L"FilterMatchFiles: FilePaths is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*FilePaths) {
         LOG_ERROR(L"FilterMatchFiles: *FilePaths is not NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!FilePathCount) {
         LOG_ERROR(L"FilterMatchFiles: FilePathCount is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*FilePathCount != 0) {
         LOG_ERROR(L"FilterMatchFiles: *FilePathCount is not 0");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
-    /* Find the default partition (the one holding the boot image) */
-    Status = GetDefaultPartition(Partitions, PartitionCount, &DefaultPartition);
+    /* Find the default partition spec (the one holding the boot image) */
+    Status = GetDefaultPartition(PartitionSpecs, PartitionSpecCount, &DefaultPartitionSpec);
     if (EFI_ERROR(Status)) {
         LOG_ERROR(L"FilterMatchFiles: GetDefaultPartition failed, Status=%r", Status);
         goto Error;
     }
 
-    /* Iterate over all partitions */
-    for (i = 0; i < PartitionCount; i++) {
+    /* Iterate over all partition specs */
+    for (i = 0; i < PartitionSpecCount; i++) {
         MatchesPartition = FALSE;
 
-        /* Check if the partition matches any filter in MatchParts */
+        /* Check if the partition spec matches any filter in MatchParts */
         for (j = 0; j < MatchPartCount; j++) {
-            if (MatchesPartitionFilter(&Partitions[i], MatchParts[j])) {
+            if (MatchesPartitionFilter(PartitionSpecs[i], MatchParts[j])) {
                 MatchesPartition = TRUE;
                 break;
             }
@@ -112,7 +111,7 @@ EFI_STATUS FilterMatchFiles(
         }
 
         /* Open the partition */
-        Status = OpenPartition(&Partitions[i], &PartitionRoot);
+        Status = OpenPartition(PartitionSpecs[i], &PartitionRoot);
         if (EFI_ERROR(Status)) {
             LOG_ERROR(L"FilterMatchFiles: OpenPartition %lu failed, Status=%r", (UINT64)i, Status);
             goto Error;
@@ -123,8 +122,8 @@ EFI_STATUS FilterMatchFiles(
             CHAR16 *DirPath = MatchDirs[j];
             IsRelative = (DirPath[0] != L'\\');
 
-            /* Skip relative paths if this isn't the default partition */
-            if (IsRelative && (&Partitions[i] != DefaultPartition)) {
+            /* Skip relative paths if this isn't the default partition spec */
+            if (IsRelative && (PartitionSpecs[i] != DefaultPartitionSpec)) {
                 continue;
             }
 
@@ -132,7 +131,7 @@ EFI_STATUS FilterMatchFiles(
             FullDirPath = NULL;
             if (IsRelative) {
                 /* Prepend the default partition's path */
-                Status = BuildFullPath(DefaultPartition, DirPath, &FullDirPath);
+                Status = BuildFullPath(DefaultPartitionSpec, DirPath, &FullDirPath);
                 if (EFI_ERROR(Status)) {
                     LOG_ERROR(L"FilterMatchFiles: BuildFullPath failed, Status=%r", Status);
                     goto Error;
@@ -155,9 +154,9 @@ EFI_STATUS FilterMatchFiles(
             for (k = 0; k < FileCount; k++) {
                 for (l = 0; l < MatchPatternCount; l++) {
                     if (MatchesFilePattern(FileList[k], MatchPatterns[l])) {
-                        /* Build the full file path: {GUID}\\directory\\path\\file.ext */
+                        /* Build the full file path: {partition_spec}\\directory\\path\\file.ext */
                         FilePath = NULL;
-                        Status = BuildFilePath(&Partitions[i], FullDirPath, FileList[k], &FilePath);
+                        Status = BuildFilePath(PartitionSpecs[i], FullDirPath, FileList[k], &FilePath);
                         if (EFI_ERROR(Status)) {
                             LOG_ERROR(L"FilterMatchFiles: BuildFilePath failed, Status=%r", Status);
                             goto Error;

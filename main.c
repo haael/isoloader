@@ -3,7 +3,6 @@
 #include "files.h"
 #include "match.h"
 #include "partition.h"
-#include "utils.h"
 
 /* Global variable to store the image handle */
 EFI_HANDLE gAppImageHandle = NULL;
@@ -25,12 +24,12 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	/* Validate input parameters */
 	if (!ImageHandle) {
 		LOG_ERROR(L"efi_main: ImageHandle is NULL");
-		Status = INVALID_PARAMETER_ERROR;
+		Status = EFI_INVALID_PARAMETER;
 		goto Cleanup;
 	}
 	if (!SystemTable) {
 		LOG_ERROR(L"efi_main: SystemTable is NULL");
-		Status = INVALID_PARAMETER_ERROR;
+		Status = EFI_INVALID_PARAMETER;
 		goto Cleanup;
 	}
 
@@ -56,8 +55,8 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	CHAR16 **ImagePatterns = NULL;
 	UINTN ImagePatternCount = 0;
 
-	PARTITION_INFO *Partitions = NULL;
-	UINTN PartitionCount = 0;
+	CHAR16 **PartitionSpecs = NULL;
+	UINTN PartitionSpecCount = 0;
 
 	CHAR16 **DriverFilePaths = NULL;
 	UINTN DriverFilePathCount = 0;
@@ -117,7 +116,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	LOG_DEBUG(L"efi_main: freed ConfigText");
 	
 	// Find all partitions on the system.
-	Status = EnumeratePartitions(&Partitions, &PartitionCount);
+	Status = EnumeratePartitions(&PartitionSpecs, &PartitionSpecCount);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: EnumeratePartitions failed, Status=%r", Status);
 		goto Cleanup;
@@ -126,7 +125,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	// Find the driver files in each configured partition/directory/pattern combination.
 	if (DriverPartCount > 0 && DriverDirCount > 0 && DriverPatternCount > 0) {
 		Status = FilterMatchFiles(
-			Partitions, PartitionCount,
+			PartitionSpecs, PartitionSpecCount,
 			DriverParts, DriverPartCount,
 			DriverDirs, DriverDirCount,
 			DriverPatterns, DriverPatternCount,
@@ -143,7 +142,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		Status = EFI_SUCCESS;
 		goto Cleanup;
 	}
-
 
 	// TODO: do the rest
 
@@ -179,9 +177,9 @@ Cleanup:
 		LOG_DEBUG(L"efi_main: cleanup freeing ImagePatterns");
 		FreeCHAR16Array(&ImagePatterns, ImagePatternCount);
 	}
-	if (Partitions) {
-		LOG_DEBUG(L"efi_main: cleanup freeing Partitions");
-		FreePool(Partitions);
+	if (PartitionSpecs) {
+		LOG_DEBUG(L"efi_main: cleanup freeing PartitionSpecs");
+		FreeCHAR16Array(&PartitionSpecs, PartitionSpecCount);
 	}
 	if (DriverFilePaths) {
 		LOG_DEBUG(L"efi_main: cleanup freeing DriverFilePaths");

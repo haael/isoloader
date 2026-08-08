@@ -1,65 +1,4 @@
 #include "common.h"
-#include "utils.h"
-
-/**
- * @brief Duplicates a CHAR16 string.
- * @param[in]  src Source string.
- * @param[out] dst Pointer to receive duplicated string.
- * @return EFI_STATUS
- *
-EFI_STATUS StrDuplicate(IN CHAR16 *src, OUT CHAR16 **dst)
-{
-    EFI_STATUS Status;
-    UINTN len = 0;
-
-    LOG_DEBUG(L"StrDuplicate: src=%p, dst=%p", (VOID*)src, (VOID*)dst);
-
-    /* Validate input parameters *
-    if (!src) {
-        LOG_ERROR(L"StrDuplicate: src is NULL");
-        return INVALID_PARAMETER_ERROR;
-    }
-
-    /* Validate output parameters *
-    if (!dst) {
-        LOG_ERROR(L"StrDuplicate: dst is NULL");
-        return INVALID_PARAMETER_ERROR;
-    }
-    if (*dst) {
-        LOG_ERROR(L"StrDuplicate: *dst is not NULL");
-        return INVALID_PARAMETER_ERROR;
-    }
-
-    len = StrLen(src);
-
-    *dst = AllocatePool((len + 1) * sizeof(CHAR16));
-    if (!*dst) {
-        LOG_ERROR(L"StrDuplicate: AllocatePool failed");
-        Status = EFI_OUT_OF_RESOURCES;
-        goto Error;
-    }
-
-    Status = StrCpyS(*dst, (len + 1) * sizeof(CHAR16), src);
-    if (EFI_ERROR(Status)) {
-        LOG_ERROR(L"StrDuplicate: StrCpyS failed, Status=%r", Status);
-        goto Error;
-    }
-
-    Status = EFI_SUCCESS;
-    goto Success;
-
-Error:
-    if (dst && *dst) {
-        LOG_DEBUG(L"StrDuplicate: Error label freeing output *dst");
-        FreePool(*dst);
-        *dst = NULL;
-    }
-
-Success:
-    LOG_DEBUG(L"StrDuplicate: exit with Status=%r", Status);
-    return Status;
-}
-*/
 
 /**
  * @brief Frees an array of CHAR16 strings and the array itself.
@@ -77,12 +16,12 @@ EFI_STATUS FreeCHAR16Array(IN CHAR16 ***array, IN UINTN count)
     /* Validate input parameters */
     if (!array) {
         LOG_ERROR(L"FreeCHAR16Array: array is NULL");
-        Status = INVALID_PARAMETER_ERROR;
+        Status = EFI_INVALID_PARAMETER;
         goto Error;
     }
     if (!*array) {
         LOG_ERROR(L"FreeCHAR16Array: *array is NULL");
-        Status = INVALID_PARAMETER_ERROR;
+        Status = EFI_INVALID_PARAMETER;
         goto Error;
     }
 
@@ -125,17 +64,17 @@ EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst)
     /* Validate input parameters */
     if (!src) {
         LOG_ERROR(L"CopyUCS2toUTF8: src is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Validate output parameters */
     if (!dst) {
         LOG_ERROR(L"CopyUCS2toUTF8: dst is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*dst) {
         LOG_ERROR(L"CopyUCS2toUTF8: *dst is not NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     len = 0;
@@ -187,17 +126,17 @@ EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst)
     /* Validate input parameters */
     if (!src) {
         LOG_ERROR(L"CopyUTF8toUCS2: src is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Validate output parameters */
     if (!dst) {
         LOG_ERROR(L"CopyUTF8toUCS2: dst is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*dst) {
         LOG_ERROR(L"CopyUTF8toUCS2: *dst is not NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     len = 0;
