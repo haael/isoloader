@@ -250,7 +250,7 @@ EFI_STATUS FilterMatchFiles(
 
 Error:
     if (TempFilePaths) {
-        LOG_DEBUG(L"FilterMatchFiles: Error label freeing output TempFilePaths");
+        LOG_DEBUG(L"FilterMatchFiles: Error freeing output TempFilePaths");
         FreeCHAR16Array(&TempFilePaths, TempFilePathCount);
     }
     if (FilePaths) {
@@ -262,19 +262,19 @@ Error:
 
 Success:
     if (PartitionRoot) {
-        LOG_DEBUG(L"FilterMatchFiles: Success label closing PartitionRoot");
+        LOG_DEBUG(L"FilterMatchFiles: Success closing PartitionRoot");
         PartitionRoot->Close(PartitionRoot);
     }
     if (IsRelative && FullDirPath) {
-        LOG_DEBUG(L"FilterMatchFiles: Success label freeing FullDirPath");
+        LOG_DEBUG(L"FilterMatchFiles: Success freeing FullDirPath");
         FreePool(FullDirPath);
     }
     if (FileList) {
-        LOG_DEBUG(L"FilterMatchFiles: Success label freeing FileList");
+        LOG_DEBUG(L"FilterMatchFiles: Success freeing FileList");
         FreeCHAR16Array(&FileList, FileCount);
     }
     if (FilePath) {
-        LOG_DEBUG(L"FilterMatchFiles: Success label freeing FilePath");
+        LOG_DEBUG(L"FilterMatchFiles: Success freeing FilePath");
         FreePool(FilePath);
     }
 

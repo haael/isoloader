@@ -121,7 +121,7 @@ EFI_STATUS ReadFile(IN CHAR16 *Path, OUT CHAR8 **Buffer, OUT UINTN *BufferSize)
 
 Error:
     if (Buffer && *Buffer) {
-        LOG_DEBUG(L"ReadFile: Error label freeing output Buffer");
+        LOG_DEBUG(L"ReadFile: freeing output Buffer on error");
         FreePool(*Buffer);
         *Buffer = NULL;
     }
@@ -131,23 +131,23 @@ Error:
 
 Success:
     if (FileHandle) {
-        LOG_DEBUG(L"ReadFile: Success label closing FileHandle");
+        LOG_DEBUG(L"ReadFile: closing FileHandle");
         FileHandle->Close(FileHandle);
     }
     if (Root) {
-        LOG_DEBUG(L"ReadFile: Success label closing Root");
+        LOG_DEBUG(L"ReadFile: closing Root");
         Root->Close(Root);
     }
     if (FileInfo) {
-        LOG_DEBUG(L"ReadFile: Success label freeing FileInfo");
+        LOG_DEBUG(L"ReadFile: freeing FileInfo");
         FreePool(FileInfo);
     }
     if (FileSystem) {
-        LOG_DEBUG(L"ReadFile: Success label closing FileSystem protocol");
+        LOG_DEBUG(L"ReadFile: closing FileSystem protocol");
         gBS->CloseProtocol(DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, gAppImageHandle, NULL);
     }
     if (LoadedImage) {
-        LOG_DEBUG(L"ReadFile: Success label closing LoadedImage protocol");
+        LOG_DEBUG(L"ReadFile: closing LoadedImage protocol");
         gBS->CloseProtocol(gAppImageHandle, &gEfiLoadedImageProtocolGuid, gAppImageHandle, NULL);
     }
 
@@ -162,16 +162,22 @@ Success:
  * @param[out] Path          Pointer to receive allocated NULL-terminated path string.
  * @param[out] PathLength    Pointer to receive path length (does not include the final NULL).
  * @return EFI_STATUS
+ * @note For the first segment: double backslash at start is preserved (device path),
+ *       single backslash is preserved, no backslash means no backslash in result.
+ *       For other segments: leading backslash is not allowed (error).
+ *       Double or more backslashes anywhere in any segment is not allowed (error).
+ *       Dot elements (.) are removed. Double dot elements (..) remove the previous element.
  */
 EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **Path, OUT UINTN *PathLength)
 {
     EFI_STATUS Status = EFI_SUCCESS;
     UINTN i = 0;
     UINTN TotalLength = 0;
-    UINTN SegmentStart = 0;
     CHAR16 *TempPath = NULL;
     CHAR16 *Ptr = NULL;
     INTN Depth = 0;
+    BOOLEAN FirstSegment = TRUE;
+    UINTN LeadingBackslashes = 0;
 
     LOG_DEBUG(L"BuildPath: Segments=%p, SegmentCount=%lu, Path=%p, PathLength=%p",
               (VOID*)Segments, (UINT64)SegmentCount, (VOID*)Path, (VOID*)PathLength);
@@ -211,29 +217,65 @@ EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **P
         return EFI_INVALID_PARAMETER;
     }
 
-    /* First pass: calculate total length needed */
+    /* First pass: calculate total length needed and validate segments */
     for (i = 0; i < SegmentCount; i++) {
         CHAR16 *Segment = Segments[i];
-        UINTN SegmentLen = 0;
+        UINTN SegmentLen = StrLen(Segment);
+        UINTN j = 0;
 
-        /* Skip leading backslashes */
-        while (*Segment == L'\\') {
-            Segment++;
+        /* Check for multiple consecutive backslashes in any segment */
+        for (j = 0; j < SegmentLen; j++) {
+            if (Segment[j] == L'\\') {
+                UINTN k = j + 1;
+                while (k < SegmentLen && Segment[k] == L'\\') {
+                    k++;
+                }
+                if (k - j > 2) {
+                    LOG_ERROR(L"BuildPath: triple or more backslashes found in segment %lu", (UINT64)i);
+                    return EFI_INVALID_PARAMETER;
+                }
+                if (k - j == 2) {
+                    /* Double backslash */
+                    if (i == 0 && j == 0) {
+                        /* Double backslash at start of first segment is OK (device path) */
+                        j = k - 1;
+                        continue;
+                    } else {
+                        LOG_ERROR(L"BuildPath: double backslash found in segment %lu at position %lu", (UINT64)i, (UINT64)j);
+                        return EFI_INVALID_PARAMETER;
+                    }
+                }
+                j = k - 1;
+            }
+        }
+
+        /* For non-first segments, check for leading backslash */
+        if (i > 0 && SegmentLen > 0 && Segment[0] == L'\\') {
+            LOG_ERROR(L"BuildPath: leading backslash not allowed in non-first segment %lu", (UINT64)i);
+            return EFI_INVALID_PARAMETER;
+        }
+
+        /* Count leading backslashes for first segment */
+        if (i == 0) {
+            LeadingBackslashes = 0;
+            while (LeadingBackslashes < SegmentLen && Segment[LeadingBackslashes] == L'\\') {
+                LeadingBackslashes++;
+            }
         }
 
         /* Skip trailing backslashes */
-        SegmentLen = StrLen(Segment);
-        while (SegmentLen > 0 && Segment[SegmentLen - 1] == L'\\') {
-            SegmentLen--;
+        UINTN EffectiveLen = SegmentLen;
+        while (EffectiveLen > 0 && Segment[EffectiveLen - 1] == L'\\') {
+            EffectiveLen--;
         }
 
         /* Check for dot elements */
-        if (SegmentLen == 1 && Segment[0] == L'.') {
+        if (EffectiveLen == 1 && Segment[0] == L'.') {
             /* Single dot - skip this segment */
             continue;
         }
 
-        if (SegmentLen == 2 && Segment[0] == L'.' && Segment[1] == L'.') {
+        if (EffectiveLen == 2 && Segment[0] == L'.' && Segment[1] == L'.') {
             /* Double dot - remove previous element */
             if (Depth <= 0) {
                 LOG_ERROR(L"BuildPath: too many double dots at segment %lu", (UINT64)i);
@@ -243,12 +285,12 @@ EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **P
             /* Reduce total length by the previous segment's contribution */
             if (TotalLength > 0) {
                 /* Find the previous segment's end */
-                UINTN j = TotalLength - 1;
-                while (j > 0 && TempPath[j - 1] != L'\\') {
-                    j--;
+                UINTN pos = TotalLength - 1;
+                while (pos > 0 && TempPath[pos - 1] != L'\\') {
+                    pos--;
                 }
-                if (j > 0) {
-                    TotalLength = j - 1; /* Keep the backslash before this segment */
+                if (pos > 0) {
+                    TotalLength = pos - 1; /* Keep the backslash before this segment */
                 } else {
                     TotalLength = 0;
                 }
@@ -256,11 +298,11 @@ EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **P
             continue;
         }
 
-        /* Valid segment - add its length plus a backslash */
+        /* Valid segment - add its length */
         if (TotalLength > 0) {
             TotalLength++; /* Add backslash separator */
         }
-        TotalLength += SegmentLen;
+        TotalLength += EffectiveLen;
         Depth++;
     }
 
@@ -275,29 +317,26 @@ EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **P
     /* Second pass: build the path */
     Ptr = TempPath;
     Depth = 0;
+    FirstSegment = TRUE;
 
     for (i = 0; i < SegmentCount; i++) {
         CHAR16 *Segment = Segments[i];
-        UINTN SegmentLen = 0;
-
-        /* Skip leading backslashes */
-        while (*Segment == L'\\') {
-            Segment++;
-        }
+        UINTN SegmentLen = StrLen(Segment);
+        UINTN j = 0;
 
         /* Skip trailing backslashes */
-        SegmentLen = StrLen(Segment);
-        while (SegmentLen > 0 && Segment[SegmentLen - 1] == L'\\') {
-            SegmentLen--;
+        UINTN EffectiveLen = SegmentLen;
+        while (EffectiveLen > 0 && Segment[EffectiveLen - 1] == L'\\') {
+            EffectiveLen--;
         }
 
         /* Check for dot elements */
-        if (SegmentLen == 1 && Segment[0] == L'.') {
+        if (EffectiveLen == 1 && Segment[0] == L'.') {
             /* Single dot - skip this segment */
             continue;
         }
 
-        if (SegmentLen == 2 && Segment[0] == L'.' && Segment[1] == L'.') {
+        if (EffectiveLen == 2 && Segment[0] == L'.' && Segment[1] == L'.') {
             /* Double dot - remove previous element */
             if (Depth <= 0) {
                 LOG_ERROR(L"BuildPath: too many double dots at segment %lu", (UINT64)i);
@@ -326,9 +365,27 @@ EFI_STATUS BuildPath(IN CHAR16 **Segments, IN UINTN SegmentCount, OUT CHAR16 **P
             *Ptr++ = L'\\';
         }
 
-        /* Copy the segment */
-        CopyMem(Ptr, Segment, SegmentLen * sizeof(CHAR16));
-        Ptr += SegmentLen;
+        /* For first segment, preserve leading backslashes (up to 2 for device path) */
+        if (FirstSegment) {
+            FirstSegment = FALSE;
+            /* Copy leading backslashes */
+            j = 0;
+            while (j < SegmentLen && Segment[j] == L'\\') {
+                *Ptr++ = L'\\';
+                j++;
+            }
+            /* Copy the rest of the segment (excluding trailing backslashes) */
+            CopyMem(Ptr, Segment + j, EffectiveLen * sizeof(CHAR16));
+            Ptr += EffectiveLen;
+        } else {
+            /* Copy the segment (excluding leading and trailing backslashes) */
+            j = 0;
+            while (j < SegmentLen && Segment[j] == L'\\') {
+                j++;
+            }
+            CopyMem(Ptr, Segment + j, EffectiveLen * sizeof(CHAR16));
+            Ptr += EffectiveLen;
+        }
         Depth++;
     }
 
@@ -353,7 +410,7 @@ Error:
 
 Success:
     if (TempPath) {
-        LOG_DEBUG(L"BuildPath: Success label freeing TempPath");
+        LOG_DEBUG(L"BuildPath: freeing TempPath");
         FreePool(TempPath);
     }
 
