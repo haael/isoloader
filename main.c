@@ -3,6 +3,8 @@
 #include "files.h"
 #include "match.h"
 #include "partition.h"
+#include "drivers.h"
+#include "bootiso.h"
 
 /* Global variable to store the image handle */
 EFI_HANDLE gAppImageHandle = NULL;
@@ -61,6 +63,11 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	CHAR16 **DriverFilePaths = NULL;
 	UINTN DriverFilePathCount = 0;
 
+	CHAR16 **ImageFilePaths = NULL;
+	UINTN ImageFilePathCount = 0;
+
+    UINTN i;
+
 	// Read config file.
 	Status = ReadFile((CHAR16*)ConfigFile, &ConfigText, &ConfigTextLength);
 	if (EFI_ERROR(Status)) {
@@ -69,42 +76,42 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 	
 	// Search for key "driver_partitions" in the config.
-	Status = ParseConfig(ConfigText, L"driver_partitions", &DriverParts, &DriverPartCount);
+	Status = ParseConfig(ConfigText, L"driver_partitions", &DriverParts, &DriverPartCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig driver_partitions failed, Status=%r", Status);
 		goto Cleanup;
 	}
 
 	// Search for key "driver_directories" in the config.
-	Status = ParseConfig(ConfigText, L"driver_directories", &DriverDirs, &DriverDirCount);
+	Status = ParseConfig(ConfigText, L"driver_directories", &DriverDirs, &DriverDirCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig driver_directories failed, Status=%r", Status);
 		goto Cleanup;
 	}
 
 	// Search for key "driver_patterns" in the config.
-	Status = ParseConfig(ConfigText, L"driver_patterns", &DriverPatterns, &DriverPatternCount);
+	Status = ParseConfig(ConfigText, L"driver_patterns", &DriverPatterns, &DriverPatternCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig driver_patterns failed, Status=%r", Status);
 		goto Cleanup;
 	}
 
 	// Search for key "image_partitions" in the config.
-	Status = ParseConfig(ConfigText, L"image_partitions", &ImageParts, &ImagePartCount);
+	Status = ParseConfig(ConfigText, L"image_partitions", &ImageParts, &ImagePartCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig image_partitions failed, Status=%r", Status);
 		goto Cleanup;
 	}
 
 	// Search for key "image_directories" in the config.
-	Status = ParseConfig(ConfigText, L"image_directories", &ImageDirs, &ImageDirCount);
+	Status = ParseConfig(ConfigText, L"image_directories", &ImageDirs, &ImageDirCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig image_directories failed, Status=%r", Status);
 		goto Cleanup;
 	}
 
 	// Search for key "image_patterns" in the config.
-	Status = ParseConfig(ConfigText, L"image_patterns", &ImagePatterns, &ImagePatternCount);
+	Status = ParseConfig(ConfigText, L"image_patterns", &ImagePatterns, &ImagePatternCount, ConfigTextLength);
 	if (EFI_ERROR(Status)) {
 		LOG_ERROR(L"efi_main: ParseConfig image_patterns failed, Status=%r", Status);
 		goto Cleanup;
@@ -124,26 +131,51 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	// Find the driver files in each configured partition/directory/pattern combination.
 	if (DriverPartCount > 0 && DriverDirCount > 0 && DriverPatternCount > 0) {
-		Status = FilterMatchFiles(
-			PartitionSpecs, PartitionSpecCount,
-			DriverParts, DriverPartCount,
-			DriverDirs, DriverDirCount,
-			DriverPatterns, DriverPatternCount,
-			&DriverFilePaths, &DriverFilePathCount
-		);
+		Status = FilterMatchFiles(PartitionSpecs, PartitionSpecCount, DriverParts, DriverPartCount, DriverDirs, DriverDirCount, DriverPatterns, DriverPatternCount, &DriverFilePaths, &DriverFilePathCount);
 		if (EFI_ERROR(Status)) {
-			LOG_ERROR(L"efi_main: FilterDriverFiles failed, Status=%r", Status);
+			LOG_ERROR(L"efi_main: FilterMatchFiles (drivers) failed, Status=%r", Status);
 			goto Cleanup;
 		}
 	}
 	else
 	{
-		LOG_ERROR(L"efi_main: FilterDriverFiles failed, Status=%r", Status);
+		LOG_ERROR(L"efi_main: driver path list empty");
 		Status = EFI_SUCCESS;
 		goto Cleanup;
 	}
 
-	// TODO: do the rest
+    for (i = 0; i < DriverFilePathCount; i++) {
+		Status = LoadDriver(DriverFilePaths[i]);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"efi_main: driver '%ls' load failed, Status=%r", DriverFilePaths[i], Status);
+			// driver load error is not fatal; continue
+		}
+	}
+
+	// Find the ISO files in each configured partition/directory/pattern combination.
+	if (ImagePartCount > 0 && ImageDirCount > 0 && ImagePatternCount > 0) {
+		Status = FilterMatchFiles(PartitionSpecs, PartitionSpecCount, ImageParts, ImagePartCount, ImageDirs, ImageDirCount, ImagePatterns, ImagePatternCount, &ImageFilePaths, &ImageFilePathCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"efi_main: FilterMatchFiles (ISO) failed, Status=%r", Status);
+			goto Cleanup;
+		}
+	}
+	else
+	{
+		LOG_ERROR(L"efi_main: ISO path list empty");
+		Status = EFI_SUCCESS;
+		goto Cleanup;
+	}
+
+
+    i = 0; // get image number
+
+	Status = BootImage(ImageFilePaths[i]);
+	if (EFI_ERROR(Status)) {
+		LOG_ERROR(L"efi_main: image '%ls' load failed, Status=%r", ImageFilePaths[i], Status);
+		// driver load error is not fatal; continue
+	}
+
 
 	// Set the return status to success.
 	Status = EFI_SUCCESS;
@@ -184,6 +216,10 @@ Cleanup:
 	if (DriverFilePaths) {
 		LOG_DEBUG(L"efi_main: cleanup freeing DriverFilePaths");
 		FreeCHAR16Array(&DriverFilePaths, DriverFilePathCount);
+	}
+	if (DriverFilePaths) {
+		LOG_DEBUG(L"efi_main: cleanup freeing ImageFilePaths");
+		FreeCHAR16Array(&ImageFilePaths, ImageFilePathCount);
 	}
 
 	LOG_DEBUG(L"efi_main: exit with Status=%r", Status);

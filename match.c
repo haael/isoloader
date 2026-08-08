@@ -17,18 +17,7 @@
  * @param[out] FilePathCount         Pointer to receive number of file paths (does not include the final NULL item).
  * @return EFI_STATUS
  */
-EFI_STATUS FilterMatchFiles(
-    IN CHAR16 **PartitionSpecs,
-    IN UINTN PartitionSpecCount,
-    IN CHAR16 **MatchParts,
-    IN UINTN MatchPartCount,
-    IN CHAR16 **MatchDirs,
-    IN UINTN MatchDirCount,
-    IN CHAR16 **MatchPatterns,
-    IN UINTN MatchPatternCount,
-    OUT CHAR16 ***FilePaths,
-    OUT UINTN *FilePathCount
-)
+EFI_STATUS FilterMatchFiles(IN CHAR16 **PartitionSpecs, IN UINTN PartitionSpecCount, IN CHAR16 **MatchParts, IN UINTN MatchPartCount, IN CHAR16 **MatchDirs, IN UINTN MatchDirCount, IN CHAR16 **MatchPatterns, IN UINTN MatchPatternCount, OUT CHAR16 ***FilePaths, OUT UINTN *FilePathCount)
 {
     EFI_STATUS Status = EFI_SUCCESS;
     CHAR16 *DefaultPartitionSpec = NULL;

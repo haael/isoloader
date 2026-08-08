@@ -1,8 +1,6 @@
 #ifndef MATCH_H
 #define MATCH_H
 
-#include "common.h"
-
 /**
  * @file match.h
  * @brief File and partition matching functions.

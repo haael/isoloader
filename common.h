@@ -35,7 +35,7 @@ EFI_STATUS FreeCHAR16Array(IN CHAR16 ***array, IN UINTN count);
  * @param[out] dst Pointer to receive UTF-8 string.
  * @return EFI_STATUS
  */
-EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst);
+EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst, IN UINTN MaxLen);
 
 /**
  * @brief Converts a UTF-8 string to UCS-2.
@@ -43,10 +43,14 @@ EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst);
  * @param[out] dst Pointer to receive UCS-2 string.
  * @return EFI_STATUS
  */
-EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst);
+EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst, IN UINTN MaxLen);
 
-EFI_STATUS UTF8StrLen(IN CHAR8 *src, OUT UINTN *len);
+EFI_STATUS UTF8StrLen(IN CHAR8 *src, OUT UINTN *len, IN UINTN MaxLen);
 
-EFI_STATUS UTF8StrCmp(IN CHAR8 *left, IN CHAR8 *right, IN UINTN maxlen, OUT CHAR8 *relation);
+EFI_STATUS UCS2StrLen(IN CHAR16 *src, OUT UINTN *len, IN UINTN MaxLen);
+
+EFI_STATUS UTF8StrCmp(IN CHAR8 *left, IN CHAR8 *right, OUT CHAR8 *relation, IN UINTN MaxLen);
+
+EFI_STATUS UCS2StrCmp(IN CHAR16 *left, IN CHAR16 *right, OUT CHAR8 *relation, IN UINTN MaxLen);
 
 #endif /* COMMON_H */

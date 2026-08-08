@@ -1,8 +1,6 @@
 #ifndef FILES_H
 #define FILES_H
 
-#include "common.h"
-
 /**
  * @file files.h
  * @brief File reading utilities.

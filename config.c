@@ -8,7 +8,7 @@
  * @param[out] Count   Pointer to receive number of values (does not include the final NULL item).
  * @return EFI_STATUS
  */
-EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, OUT UINTN *Count)
+EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, OUT UINTN *Count, IN UINTN MaxLen)
 {
     EFI_STATUS Status = EFI_SUCCESS;
     CHAR8 *Ptr = NULL;
@@ -46,13 +46,13 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
     }
 
     /* Convert Key to UTF-8 for comparison */
-    Status = CopyUCS2toUTF8(Key, &KeyUTF8);
+    Status = CopyUCS2toUTF8(Key, &KeyUTF8, MaxLen);
     if (EFI_ERROR(Status)) {
         LOG_ERROR(L"ParseConfig: CopyUCS2toUTF8 failed, Status=%r", Status);
         goto Error;
     }
 
-    Status = UTF8StrLen(KeyUTF8, &KeyLen);
+    Status = UTF8StrLen(KeyUTF8, &KeyLen, MaxLen);
     if (EFI_ERROR(Status)) {
         LOG_ERROR(L"ParseConfig: UTF8StrLen failed, Status=%r", Status);
         goto Error;
@@ -72,7 +72,7 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
         if (*Ptr && *Ptr != '\n' && *Ptr != '\r') {
             /* Check if this is the key we're looking for */
             CHAR8 Relation;
-            Status = UTF8StrCmp(Ptr, KeyUTF8, KeyLen, &Relation);
+            Status = UTF8StrCmp(Ptr, KeyUTF8, &Relation, KeyLen);
 			if (EFI_ERROR(Status)) {
 				LOG_ERROR(L"ParseConfig: UTF8StrCmp failed, Status=%r", Status);
 				goto Error;
@@ -130,7 +130,7 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
                 CHAR8 TmpChar = *Ptr;
                 *Ptr = '\0';
                 /* Convert UTF-8 value to UCS-2 and store */
-                Status = CopyUTF8toUCS2(ValueStart, &(*Values)[*Count]);
+                Status = CopyUTF8toUCS2(ValueStart, &(*Values)[*Count], MaxLen);
                 *Ptr = TmpChar;
                 if (EFI_ERROR(Status)) {
                     LOG_ERROR(L"ParseConfig: CopyUTF8toUCS2 failed, Status=%r", Status);

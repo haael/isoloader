@@ -53,7 +53,7 @@ Success:
  * @param[out] dst Pointer to receive UTF-8 string.
  * @return EFI_STATUS
  */
-EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst)
+EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst, IN UINTN MaxLen)
 {
     EFI_STATUS Status;
     UINTN len = 0;
@@ -77,9 +77,15 @@ EFI_STATUS CopyUCS2toUTF8(IN CHAR16 *src, OUT CHAR8 **dst)
         return EFI_INVALID_PARAMETER;
     }
 
-    len = 0;
-    while (src[len]) {
-        len++;
+    //len = 0;
+    //while (src[len]) {
+    //    len++;
+    //}
+
+    Status = UCS2StrLen(src, &len, MaxLen);
+    if (EFI_ERROR(Status)) {
+        LOG_ERROR(L"CopyUCS2toUTF8: UCS2StrLen failed, Status=%r", Status);
+        goto Error;
     }
 
     *dst = AllocatePool((len + 1) * sizeof(CHAR8));
@@ -115,7 +121,7 @@ Success:
  * @param[out] dst Pointer to receive UCS-2 string.
  * @return EFI_STATUS
  */
-EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst)
+EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst, IN UINTN MaxLen)
 {
     EFI_STATUS Status;
     UINTN len = 0;
@@ -139,9 +145,15 @@ EFI_STATUS CopyUTF8toUCS2(IN CHAR8 *src, OUT CHAR16 **dst)
         return EFI_INVALID_PARAMETER;
     }
 
-    len = 0;
-    while (src[len]) {
-        len++;
+    //len = 0;
+    //while (src[len]) {
+    //    len++;
+    //}
+
+    Status = UTF8StrLen(src, &len, MaxLen);
+    if (EFI_ERROR(Status)) {
+        LOG_ERROR(L"CopyUTF8toUCS2: UTF8StrLen failed, Status=%r", Status);
+        goto Error;
     }
 
     *dst = AllocatePool((len + 1) * sizeof(CHAR16));
@@ -170,3 +182,192 @@ Success:
     LOG_DEBUG(L"CopyUTF8toUCS2: exit with Status=%r", Status);
     return Status;
 }
+
+
+EFI_STATUS UTF8StrLen(IN CHAR8 *src, OUT UINTN *len, IN UINTN MaxLen)
+{
+    EFI_STATUS Status;
+    UINTN l = 0;
+
+    LOG_DEBUG(L"UTF8StrLen: src=%p, len=%p, MaxLen=%u", (VOID*)src, (VOID*)len, MaxLen);
+
+    /* Validate input parameters */
+    if (!src) {
+        LOG_ERROR(L"UTF8StrLen: src is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    /* Validate output parameters */
+    if (!len) {
+        LOG_ERROR(L"UTF8StrLen: len is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    l = 0;
+    while (l < MaxLen && src[l]) {
+        l++;
+    }
+
+    if (l >= MaxLen) {
+        LOG_ERROR(L"UTF8StrLen: MaxLen exceeded");
+        Status = EFI_INVALID_PARAMETER;
+        goto Error;
+    }
+
+    *len = l;
+
+    Status = EFI_SUCCESS;
+    goto Success;
+
+Error:
+Success:
+    LOG_DEBUG(L"UTF8StrLen: exit with Status=%r", Status);
+    return Status;
+}
+
+
+EFI_STATUS UCS2StrLen(IN CHAR16 *src, OUT UINTN *len, IN UINTN MaxLen)
+{
+    EFI_STATUS Status;
+    UINTN l = 0;
+
+    LOG_DEBUG(L"UTF8StrLen: src=%p, len=%p, MaxLen=%u", (VOID*)src, (VOID*)len, MaxLen);
+
+    /* Validate input parameters */
+    if (!src) {
+        LOG_ERROR(L"UCS2StrLen: src is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    /* Validate output parameters */
+    if (!len) {
+        LOG_ERROR(L"UCS2StrLen: len is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    l = 0;
+    while (l < MaxLen && src[l]) {
+        l++;
+    }
+
+    if (l >= MaxLen) {
+        LOG_ERROR(L"UCS2StrLen: MaxLen exceeded");
+        Status = EFI_INVALID_PARAMETER;
+        goto Error;
+    }
+
+    *len = l;
+
+    Status = EFI_SUCCESS;
+    goto Success;
+
+Error:
+Success:
+    LOG_DEBUG(L"UCS2StrLen: exit with Status=%r", Status);
+    return Status;
+}
+
+
+EFI_STATUS UTF8StrCmp(IN CHAR8 *left, IN CHAR8 *right, OUT CHAR8 *relation, IN UINTN MaxLen)
+{
+    EFI_STATUS Status;
+    UINTN l = 0;
+
+    LOG_DEBUG(L"UTF8StrCmp: left=%p, right=%p, relation=%p, MaxLen=%u", (VOID*)left, (VOID*)right, (VOID*)relation, MaxLen);
+
+    /* Validate input parameters */
+    if (!left) {
+        LOG_ERROR(L"UTF8StrCmp: left is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    if (!right) {
+        LOG_ERROR(L"UTF8StrCmp: right is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    if (!relation) {
+        LOG_ERROR(L"UTF8StrCmp: relation is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    l = 0;
+    while (l < MaxLen && left[l] && right[l] && (left[l] == right[l])) {
+        l++;
+    }
+
+    if (l >= MaxLen) {
+        LOG_ERROR(L"UTF8StrCmp: MaxLen exceeded");
+        Status = EFI_INVALID_PARAMETER;
+        goto Error;
+    }
+
+    if (left[l] < right[l])
+        *relation = 1;
+    else if (left[l] > right[l])
+        *relation = -1;
+    else
+        *relation = 0;
+
+    Status = EFI_SUCCESS;
+    goto Success;
+
+Error:
+Success:
+    LOG_DEBUG(L"UTF8StrCmp: exit with Status=%r", Status);
+    return Status;
+}
+
+
+EFI_STATUS UCS2StrCmp(IN CHAR16 *left, IN CHAR16 *right, OUT CHAR8 *relation, IN UINTN MaxLen)
+{
+    EFI_STATUS Status;
+    UINTN l = 0;
+
+    LOG_DEBUG(L"UCS2StrCmp: left=%p, right=%p, relation=%p, MaxLen=%u", (VOID*)left, (VOID*)right, (VOID*)relation, MaxLen);
+
+    /* Validate input parameters */
+    if (!left) {
+        LOG_ERROR(L"UCS2StrCmp: left is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    if (!right) {
+        LOG_ERROR(L"UCS2StrCmp: right is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    if (!relation) {
+        LOG_ERROR(L"UCS2StrCmp: relation is NULL");
+        return EFI_INVALID_PARAMETER;
+    }
+
+    l = 0;
+    while (l < MaxLen && left[l] && right[l] && (left[l] == right[l])) {
+        l++;
+    }
+
+    if (l >= MaxLen) {
+        LOG_ERROR(L"UCS2StrCmp: MaxLen exceeded");
+        Status = EFI_INVALID_PARAMETER;
+        goto Error;
+    }
+
+    if (left[l] < right[l])
+        *relation = 1;
+    else if (left[l] > right[l])
+        *relation = -1;
+    else
+        *relation = 0;
+
+    Status = EFI_SUCCESS;
+    goto Success;
+
+Error:
+Success:
+    LOG_DEBUG(L"UCS2StrCmp: exit with Status=%r", Status);
+    return Status;
+}
+
+
+

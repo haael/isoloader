@@ -1,8 +1,6 @@
 #ifndef PARTITION_H
 #define PARTITION_H
 
-#include "common.h"
-
 /**
  * @file partition.h
  * @brief Partition enumeration and path building helpers.

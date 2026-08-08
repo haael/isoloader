@@ -1,8 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "common.h"
-
 /**
  * @file config.h
  * @brief Configuration file parser.
@@ -16,6 +14,6 @@
  * @param[out] Count   Pointer to receive number of values (does not include the final NULL item).
  * @return EFI_STATUS
  */
-EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, OUT UINTN *Count);
+EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, OUT UINTN *Count, IN UINTN MaxLen);
 
 #endif /* CONFIG_H */
