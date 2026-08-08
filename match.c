@@ -1,6 +1,7 @@
 #include "common.h"
 #include "match.h"
 #include "partition.h"
+#include "files.h"
 
 /**
  * @brief Filters files based on partition spec, directory, and pattern criteria.
@@ -36,9 +37,11 @@ EFI_STATUS FilterMatchFiles(
     UINTN TempFilePathCapacity = 0;
     EFI_FILE_HANDLE PartitionRoot = NULL;
     CHAR16 *FullDirPath = NULL;
+    UINTN FullDirPathLength = 0;
     CHAR16 **FileList = NULL;
     UINTN FileCount = 0;
     CHAR16 *FilePath = NULL;
+    UINTN FilePathLength = 0;
     UINTN i = 0;
     UINTN j = 0;
     UINTN k = 0;
@@ -129,11 +132,13 @@ EFI_STATUS FilterMatchFiles(
 
             /* Build the full path for the directory */
             FullDirPath = NULL;
+            FullDirPathLength = 0;
             if (IsRelative) {
-                /* Prepend the default partition's path */
-                Status = BuildFullPath(DefaultPartitionSpec, DirPath, &FullDirPath);
+                /* Build path from partition spec and directory */
+                CHAR16 *Segments[3] = {PartitionSpecs[i], DirPath, NULL};
+                Status = BuildPath(Segments, 2, &FullDirPath, &FullDirPathLength);
                 if (EFI_ERROR(Status)) {
-                    LOG_ERROR(L"FilterMatchFiles: BuildFullPath failed, Status=%r", Status);
+                    LOG_ERROR(L"FilterMatchFiles: BuildPath failed for directory, Status=%r", Status);
                     goto Error;
                 }
             } else {
@@ -154,11 +159,20 @@ EFI_STATUS FilterMatchFiles(
             for (k = 0; k < FileCount; k++) {
                 for (l = 0; l < MatchPatternCount; l++) {
                     if (MatchesFilePattern(FileList[k], MatchPatterns[l])) {
-                        /* Build the full file path: {partition_spec}\\directory\\path\\file.ext */
+                        /* Build the full file path from partition spec, directory, and filename */
                         FilePath = NULL;
-                        Status = BuildFilePath(PartitionSpecs[i], FullDirPath, FileList[k], &FilePath);
+                        FilePathLength = 0;
+                        if (IsRelative) {
+                            /* Build path from partition spec, directory, and filename */
+                            CHAR16 *Segments[4] = {PartitionSpecs[i], DirPath, FileList[k], NULL};
+                            Status = BuildPath(Segments, 3, &FilePath, &FilePathLength);
+                        } else {
+                            /* Build path from directory and filename */
+                            CHAR16 *Segments[3] = {DirPath, FileList[k], NULL};
+                            Status = BuildPath(Segments, 2, &FilePath, &FilePathLength);
+                        }
                         if (EFI_ERROR(Status)) {
-                            LOG_ERROR(L"FilterMatchFiles: BuildFilePath failed, Status=%r", Status);
+                            LOG_ERROR(L"FilterMatchFiles: BuildPath failed for file, Status=%r", Status);
                             goto Error;
                         }
 
