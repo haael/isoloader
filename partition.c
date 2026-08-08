@@ -134,7 +134,7 @@ EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *Partitio
 
 Error:
     if (TempPartitionSpecs) {
-        LOG_DEBUG(L"EnumeratePartitions: Error label freeing TempPartitionSpecs");
+        LOG_DEBUG(L"EnumeratePartitions: Error freeing TempPartitionSpecs");
         UINTN j = 0;
         for (j = 0; j < PartitionSpecCapacity; j++) {
             if (TempPartitionSpecs[j]) {
@@ -152,11 +152,11 @@ Error:
 
 Success:
     if (HandleBuffer) {
-        LOG_DEBUG(L"EnumeratePartitions: Success label freeing HandleBuffer");
+        LOG_DEBUG(L"EnumeratePartitions: Success freeing HandleBuffer");
         FreePool(HandleBuffer);
     }
     if (DevicePathStr) {
-        LOG_DEBUG(L"EnumeratePartitions: Success label freeing DevicePathStr");
+        LOG_DEBUG(L"EnumeratePartitions: Success freeing DevicePathStr");
         FreePool(DevicePathStr);
     }
 
