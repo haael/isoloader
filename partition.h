@@ -10,46 +10,46 @@
 
 /**
  * @brief Enumerates all available partitions.
- * @param[out] Partitions     Pointer to receive array of partition infos.
- * @param[out] PartitionCount Pointer to receive number of partitions.
+ * @param[out] PartitionSpecs     Pointer to receive array of partition specs (device path, GUID, or label).
+ * @param[out] PartitionSpecCount Pointer to receive number of partition specs.
  * @return EFI_STATUS
  */
-EFI_STATUS EnumeratePartitions(OUT PARTITION_INFO **Partitions, OUT UINTN *PartitionCount);
+EFI_STATUS EnumeratePartitions(OUT CHAR16 ***PartitionSpecs, OUT UINTN *PartitionSpecCount);
 
 /**
  * @brief Finds the default partition (the one holding the boot image).
- * @param[in]  Partitions     Array of partition infos.
- * @param[in]  PartitionCount Number of partitions.
- * @param[out] DefaultPartition Pointer to receive the default partition.
+ * @param[in]  PartitionSpecs     Array of partition specs.
+ * @param[in]  PartitionSpecCount Number of partition specs.
+ * @param[out] DefaultPartitionSpec Pointer to receive the default partition spec.
  * @return EFI_STATUS
  */
-EFI_STATUS GetDefaultPartition(IN PARTITION_INFO *Partitions, IN UINTN PartitionCount, OUT PARTITION_INFO **DefaultPartition);
+EFI_STATUS GetDefaultPartition(IN CHAR16 **PartitionSpecs, IN UINTN PartitionSpecCount, OUT CHAR16 **DefaultPartitionSpec);
 
 /**
  * @brief Opens a partition and returns its root file handle.
- * @param[in]  Partition Partition to open.
- * @param[out] Root      Pointer to receive root file handle.
+ * @param[in]  PartitionSpec Partition spec (device path, GUID, or label).
+ * @param[out] Root          Pointer to receive root file handle.
  * @return EFI_STATUS
  */
-EFI_STATUS OpenPartition(IN PARTITION_INFO *Partition, OUT EFI_FILE_HANDLE *Root);
+EFI_STATUS OpenPartition(IN CHAR16 *PartitionSpec, OUT EFI_FILE_HANDLE *Root);
 
 /**
- * @brief Builds a full path from a partition and relative path.
- * @param[in]  Partition     Partition info.
+ * @brief Builds a full path from a partition spec and relative path.
+ * @param[in]  PartitionSpec Partition spec (device path, GUID, or label).
  * @param[in]  RelativePath  Relative path string.
  * @param[out] FullPath      Pointer to receive allocated full path.
  * @return EFI_STATUS
  */
-EFI_STATUS BuildFullPath(IN PARTITION_INFO *Partition, IN CHAR16 *RelativePath, OUT CHAR16 **FullPath);
+EFI_STATUS BuildFullPath(IN CHAR16 *PartitionSpec, IN CHAR16 *RelativePath, OUT CHAR16 **FullPath);
 
 /**
- * @brief Builds a full file path from partition, directory, and filename.
- * @param[in]  Partition Partition info.
- * @param[in]  DirPath   Directory path.
- * @param[in]  FileName  File name.
- * @param[out] FilePath  Pointer to receive allocated file path.
+ * @brief Builds a full file path from partition spec, directory, and filename.
+ * @param[in]  PartitionSpec Partition spec (device path, GUID, or label).
+ * @param[in]  DirPath        Directory path.
+ * @param[in]  FileName       File name.
+ * @param[out] FilePath       Pointer to receive allocated file path.
  * @return EFI_STATUS
  */
-EFI_STATUS BuildFilePath(IN PARTITION_INFO *Partition, IN CHAR16 *DirPath, IN CHAR16 *FileName, OUT CHAR16 **FilePath);
+EFI_STATUS BuildFilePath(IN CHAR16 *PartitionSpec, IN CHAR16 *DirPath, IN CHAR16 *FileName, OUT CHAR16 **FilePath);
 
 #endif /* PARTITION_H */

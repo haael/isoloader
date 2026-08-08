@@ -24,21 +24,21 @@ EFI_STATUS ReadFile(IN CHAR16 *Path, OUT CHAR8 **Buffer, OUT UINTN *BufferSize)
     /* Validate input parameters */
     if (!Path) {
         LOG_ERROR(L"ReadFile: Path is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Validate output parameters */
     if (!Buffer) {
         LOG_ERROR(L"ReadFile: Buffer is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*Buffer) {
         LOG_ERROR(L"ReadFile: *Buffer is not NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!BufferSize) {
         LOG_ERROR(L"ReadFile: BufferSize is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Open loaded image protocol */

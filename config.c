@@ -1,5 +1,4 @@
 #include "common.h"
-#include "utils.h"
 
 /**
  * @brief Parses a configuration file buffer for a given key.
@@ -25,25 +24,25 @@ EFI_STATUS ParseConfig(IN CHAR8 *Buffer, IN CHAR16 *Key, OUT CHAR16 ***Values, O
     /* Validate input parameters */
     if (!Buffer) {
         LOG_ERROR(L"ParseConfig: Buffer is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!Key) {
         LOG_ERROR(L"ParseConfig: Key is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Validate output parameters */
     if (!Values) {
         LOG_ERROR(L"ParseConfig: Values is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (*Values) {
         LOG_ERROR(L"ParseConfig: *Values is not NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
     if (!Count) {
         LOG_ERROR(L"ParseConfig: Count is NULL");
-        return INVALID_PARAMETER_ERROR;
+        return EFI_INVALID_PARAMETER;
     }
 
     /* Convert Key to UTF-8 for comparison */
