@@ -1,3 +1,5 @@
+
+
 #include "common.h"
 #include "config.h"
 #include "files.h"
@@ -144,7 +146,8 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 	else
 	{
-		LOG_ERROR(L"ISOLoader: driver path list empty");
+		LOG_INFO(L"ISOLoader: Driver path list empty.");
+		DriverFilePaths = NULL;
 		DriverFilePathCount = 0;
 	}
 	
@@ -168,7 +171,8 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 	else
 	{
-		LOG_ERROR(L"ISOLoader: ISO path list empty");
+		LOG_INFO(L"ISOLoader: ISO path list empty.");
+		ImageFilePaths = NULL;
 		ImageFilePathCount = 0;
 	}
 	
@@ -199,7 +203,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 			LOG_ERROR(L"ISOLoader: image '%ls' load failed, Status=%r", ImageFilePaths[i], Status);
 			// non-fatal error, try again
 		} else {
-			LOG_ERROR(L"ISOLoader: not booting image '%ls'", ImageFilePaths[i]);
+			LOG_INFO(L"ISOLoader: not booting image '%ls'", ImageFilePaths[i]);
 			// booting of image abandoned for some reason
 		}
 	};
@@ -212,41 +216,77 @@ Cleanup:
 		LOG_DEBUG(L"ISOLoader: freeing ConfigText");
 		FreePool(ConfigText);
 	}
+	
 	if (DriverParts) {
 		LOG_DEBUG(L"ISOLoader: freeing DriverParts");
-		FreeCHAR16Array(&DriverParts, DriverPartCount);
+		Status = FreeCHAR16Array(&DriverParts, DriverPartCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on DriverParts=%x, Status=%r", DriverParts, Status);
+		}
 	}
+	
 	if (DriverDirs) {
 		LOG_DEBUG(L"ISOLoader: freeing DriverDirs");
-		FreeCHAR16Array(&DriverDirs, DriverDirCount);
+		Status = FreeCHAR16Array(&DriverDirs, DriverDirCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on DriverDirs=%x, Status=%r", DriverDirs, Status);
+		}
 	}
+	
 	if (DriverPatterns) {
 		LOG_DEBUG(L"ISOLoader: freeing DriverPatterns");
-		FreeCHAR16Array(&DriverPatterns, DriverPatternCount);
+		Status = FreeCHAR16Array(&DriverPatterns, DriverPatternCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on DriverPatterns=%x, Status=%r", DriverPatterns, Status);
+		}
 	}
+	
 	if (ImageParts) {
 		LOG_DEBUG(L"ISOLoader: freeing ImageParts");
-		FreeCHAR16Array(&ImageParts, ImagePartCount);
+		Status = FreeCHAR16Array(&ImageParts, ImagePartCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on ImageParts=%x, Status=%r", ImageParts, Status);
+		}
 	}
+	
 	if (ImageDirs) {
 		LOG_DEBUG(L"ISOLoader: freeing ImageDirs");
-		FreeCHAR16Array(&ImageDirs, ImageDirCount);
+		Status = FreeCHAR16Array(&ImageDirs, ImageDirCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on ImageDirs=%x, Status=%r", ImageDirs, Status);
+		}
 	}
+	
 	if (ImagePatterns) {
 		LOG_DEBUG(L"ISOLoader: freeing ImagePatterns");
-		FreeCHAR16Array(&ImagePatterns, ImagePatternCount);
+		Status = FreeCHAR16Array(&ImagePatterns, ImagePatternCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on ImagePatterns=%x, Status=%r", ImagePatterns, Status);
+		}
 	}
+	
 	if (PartitionSpecs) {
 		LOG_DEBUG(L"ISOLoader: freeing PartitionSpecs");
-		FreeCHAR16Array(&PartitionSpecs, PartitionSpecCount);
+		Status = FreeCHAR16Array(&PartitionSpecs, PartitionSpecCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on PartitionSpecs=%x, Status=%r", PartitionSpecs, Status);
+		}
 	}
+	
 	if (DriverFilePaths) {
 		LOG_DEBUG(L"ISOLoader: freeing DriverFilePaths");
-		FreeCHAR16Array(&DriverFilePaths, DriverFilePathCount);
+		Status = FreeCHAR16Array(&DriverFilePaths, DriverFilePathCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on DriverFilePaths=%x, Status=%r", DriverFilePaths, Status);
+		}
 	}
+	
 	if (DriverFilePaths) {
 		LOG_DEBUG(L"ISOLoader: freeing ImageFilePaths");
-		FreeCHAR16Array(&ImageFilePaths, ImageFilePathCount);
+		Status = FreeCHAR16Array(&ImageFilePaths, ImageFilePathCount);
+		if (EFI_ERROR(Status)) {
+			LOG_ERROR(L"ISOLoader: FreeCHAR16Array failed on ImageFilePaths=%x, Status=%r", ImageFilePaths, Status);
+		}
 	}
 	
 	LOG_DEBUG(L"ISOLoader: exit with Status=%r", Status);
